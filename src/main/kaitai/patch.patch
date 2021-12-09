@@ -1,0 +1,104 @@
+--- target/generated-sources/kaitai/vavi/nio/file/apfs/kaitai/Apfs.java	2021-11-07 02:52:13.000000000 +0900
++++ tmp/Apfs.java	2021-10-21 18:03:12.000000000 +0900
+@@ -94,11 +94,11 @@
+ 
+         private final long id;
+         ObjectType(long id) { this.id = id; }
+-        public long id() { return id; }
++        public int id() { return (int) id; }
+         private static final Map<Long, ObjectType> byId = new HashMap<Long, ObjectType>(28);
+         static {
+             for (ObjectType e : ObjectType.values())
+-                byId.put(e.id(), e);
++                byId.put((long) e.id(), e);
+         }
+         public static ObjectType byId(long id) { return byId.get(id); }
+     }
+@@ -135,11 +135,11 @@
+ 
+         private final long id;
+         JObjTypes(long id) { this.id = id; }
+-        public long id() { return id; }
++        public int id() { return (int) id; }
+         private static final Map<Long, JObjTypes> byId = new HashMap<Long, JObjTypes>(13);
+         static {
+             for (JObjTypes e : JObjTypes.values())
+-                byId.put(e.id(), e);
++                byId.put((long) e.id(), e);
+         }
+         public static JObjTypes byId(long id) { return byId.get(id); }
+     }
+@@ -644,44 +644,44 @@
+                 return this.val;
+             long _pos = this._io.pos();
+             this._io.seek(((_root.blockSize() - dataOffset()) - (40 * (_parent().btnFlags() & 1))));
+-            switch ((_parent().btnLevel() > 0 ? 256 : jKeyT().objType().id())) {
+-            case Apfs.JObjTypes.APFS_TYPE_INODE.id(): {
++            switch ((jKeyT().objType())) {
++            case APFS_TYPE_INODE: {
+                 this.val = new JInodeValT(this._io, this, _root);
+                 break;
+             }
+-            case Apfs.JObjTypes.APFS_TYPE_DIR_REC.id(): {
++            case APFS_TYPE_DIR_REC: {
+                 this.val = new JDrecValT(this._io, this, _root);
+                 break;
+             }
+-            case Apfs.JObjTypes.APFS_TYPE_FILE_EXTENT.id(): {
++            case APFS_TYPE_FILE_EXTENT: {
+                 this.val = new JExtentValT(this._io, this, _root);
+                 break;
+             }
+-            case Apfs.JObjTypes.APFS_TYPE_SIBLING_LINK.id(): {
++            case APFS_TYPE_SIBLING_LINK: {
+                 this.val = new JSiblingValT(this._io, this, _root);
+                 break;
+             }
+-            case Apfs.JObjTypes.APFS_TYPE_XATTR.id(): {
++            case APFS_TYPE_XATTR: {
+                 this.val = new JXattrValT(this._io, this, _root);
+                 break;
+             }
+-            case Apfs.JObjTypes.APFS_TYPE_EXTENT.id(): {
++            case APFS_TYPE_EXTENT: {
+                 this.val = new JPhysExtValT(this._io, this, _root);
+                 break;
+             }
+-            case Apfs.JObjTypes.APFS_TYPE_ANY.id(): {
++            case APFS_TYPE_ANY: {
+                 this.val = new OmapValT(this._io, this, _root);
+                 break;
+             }
+-            case 256: {
++            default: {
+                 this.val = new PointerValT(this._io, this, _root);
+                 break;
+             }
+-            case Apfs.JObjTypes.APFS_TYPE_SIBLING_MAP.id(): {
++            case APFS_TYPE_SIBLING_MAP: {
+                 this.val = new JSiblingMapValT(this._io, this, _root);
+                 break;
+             }
+-            case Apfs.JObjTypes.APFS_TYPE_DSTREAM_ID.id(): {
++            case APFS_TYPE_DSTREAM_ID: {
+                 this.val = new JExtentRefcountValT(this._io, this, _root);
+                 break;
+             }
+@@ -906,14 +906,14 @@
+             _read();
+         }
+         private void _read() {
+-            this.false = this._io.readU2le();
++            this.off = this._io.readU2le();
+             this.len = this._io.readU2le();
+         }
+-        private int false;
++        private int off;
+         private int len;
+         private Apfs _root;
+         private Apfs.BtreeNodePhysT _parent;
+-        public int false() { return false; }
++        public int off() { return off; }
+         public int len() { return len; }
+         public Apfs _root() { return _root; }
+         public Apfs.BtreeNodePhysT _parent() { return _parent; }
