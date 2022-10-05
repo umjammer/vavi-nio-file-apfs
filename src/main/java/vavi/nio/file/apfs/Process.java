@@ -1,23 +1,17 @@
 package vavi.nio.file.apfs;
 
-import java.io.IOException;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
-import vavi.nio.file.apfs.kaitai.Apfs;
-import vavi.nio.file.apfs.kaitai.Apfs.NodeEntry;
-import vavi.nio.file.apfs.kaitai.Apfs.XFieldT;
-import vavi.util.ByteUtil;
-import vavi.util.Debug;
-
 import io.kaitai.struct.KaitaiStream;
+import vavi.nio.file.apfs.Apfs.NodeEntry;
+import vavi.nio.file.apfs.Apfs.XFieldT;
+import vavi.util.ByteUtil;
 
 
 /**
@@ -25,25 +19,25 @@ import io.kaitai.struct.KaitaiStream;
  */
 public class Process {
 
-    static Logger logger = Logger.getLogger(Process.class.getName());
+    static final Logger logger = Logger.getLogger(Process.class.getName());
 
-    String get_path(Map<Long, Map<String, Object>> itemmap, long fid) {
-        if (itemmap.containsKey(fid)) {
-            String name = itemmap.get(fid).get("name") != null ? (String) itemmap.get(fid).get("name") : "???" + fid + "???";
-            String parent_path = (long) itemmap.get(fid).get("parent") > 1 ? get_path(itemmap, (long) itemmap.get(fid).get("parent")) : "";
+    String getPath(Map<Long, Map<String, Object>> itemMap, long fid) {
+        if (itemMap.containsKey(fid)) {
+            String name = itemMap.get(fid).get("name") != null ? (String) itemMap.get(fid).get("name") : "____" + fid + "____";
+            String parent_path = (long) itemMap.get(fid).get("parent") > 1 ? getPath(itemMap, (long) itemMap.get(fid).get("parent")) : "";
             return parent_path + "/" + name;
         }
-        return "???_UNKNOWN_???";
+        return "~~~~" + fid + "~~~~";
     }
 
-    Map<String, Object> process_extent(Map<String, Object> extent, long remaining, int blocksize, KaitaiStream file_io, MessageDigest md5) throws IOException {
-        for (int block_part = 0; block_part < (long) (extent.get("length")) / blocksize; block_part++) {
-            byte[] data = Block.get_block((int) ((long) extent.get("start")) + block_part, blocksize, file_io);
+    Map<String, Object> processExtent(Map<String, Object> extent, long remaining, int blockSize, KaitaiStream io, MessageDigest md5) {
+        for (int blockPart = 0; blockPart < (long) (extent.get("length")) / blockSize; blockPart++) {
+            byte[] data = Block.get_block((int) ((long) extent.get("start")) + blockPart, blockSize, io);
             long chunk_size;
-            if (remaining < blocksize) {
+            if (remaining < blockSize) {
                 chunk_size = remaining;
             } else {
-                chunk_size = blocksize;
+                chunk_size = blockSize;
             }
             remaining -= chunk_size;
             md5.update(data, 0, (int) chunk_size);
@@ -57,92 +51,91 @@ public class Process {
     }
 
     /** Print file entries as table */
-    public ItemStore process_file_entries(Map<Long, Map<String, List<NodeEntry>>> file_entries, Apfs apfs, int blocksize, KaitaiStream file_io) throws Exception {
+    public ItemStore processEntries(Map<Long, Map<String, List<NodeEntry>>> entries, int blockSize, KaitaiStream io) throws Exception {
 
-        Map<Long, Map<String, Map<Long, List<Map<String, Object>>>>> extentmap = new HashMap<>();
-        Map<Long, Map<String, Map<Long, Map<String, Object>>>> itemmap = new HashMap<>();
+        Map<Long, Map<String, Map<Long, List<Map<String, Object>>>>> extentMap = new HashMap<>();
+        Map<Long, Map<String, Map<Long, Map<String, Object>>>> itemMap = new HashMap<>();
 
-        for (long xid : file_entries.keySet()) {
+        for (long xid : entries.keySet()) {
 
-            extentmap.put(xid, new HashMap<>());
-            itemmap.put(xid, new HashMap<>());
+            extentMap.put(xid, new HashMap<>());
+            itemMap.put(xid, new HashMap<>());
 
-            for (String volume : file_entries.get(xid).keySet()) {
+            for (String volume : entries.get(xid).keySet()) {
 
-                extentmap.get(xid).put(volume, new HashMap<>());
-                itemmap.get(xid).put(volume, new HashMap<>());
+                extentMap.get(xid).put(volume, new HashMap<>());
+                itemMap.get(xid).put(volume, new HashMap<>());
 
-                for (NodeEntry file_entry : file_entries.get(xid).get(volume)) {
-                    // try {
-                    if (file_entry.jKeyT().objType() == Apfs.JObjTypes.APFS_TYPE_FILE_EXTENT &&
-                            file_entry.val() instanceof Apfs.JExtentValT) {
+                for (NodeEntry entry : entries.get(xid).get(volume)) {
+//try {
+                    if (entry.jKeyT().objType() == Apfs.JObjTypes.APFS_TYPE_FILE_EXTENT &&
+                            entry.val() instanceof Apfs.JExtentValT) {
 
-                        if (extentmap.get(xid).get(volume).get((long) file_entry.jKeyT().objId()) == null) {
-                            extentmap.get(xid).get(volume).put((long) file_entry.jKeyT().objId(), new ArrayList<>());
-                        }
+                        extentMap.get(xid).get(volume).computeIfAbsent((long) entry.jKeyT().objId(), k -> new ArrayList<>());
                         Map<String, Object> m = new HashMap<String, Object>() {{
-                            put("start", ((Apfs.JExtentValT) file_entry.val()).physBlockNum());
-                            put("length", ((Apfs.JExtentValT) file_entry.val()).len());
-                            put("offset", ((Apfs.JExtentKeyT) file_entry.key()).offset());
+                            put("start", ((Apfs.JExtentValT) entry.val()).physBlockNum());
+                            put("length", ((Apfs.JExtentValT) entry.val()).len());
+                            put("offset", ((Apfs.JExtentKeyT) entry.key()).offset());
                         }};
-                        extentmap.get(xid).get(volume).get((long) file_entry.jKeyT().objId()).add(m);
+                        extentMap.get(xid).get(volume).get((long) entry.jKeyT().objId()).add(m);
 
-System.err.println("extent: " + xid);
+logger.fine("extent: " + entry.jKeyT().objId() + ", " + xid);
 
-                    } else if (file_entry.jKeyT().objType() == Apfs.JObjTypes.APFS_TYPE_INODE &&
-                            file_entry.val() instanceof Apfs.JInodeValT) {
+                    } else if (entry.jKeyT().objType() == Apfs.JObjTypes.APFS_TYPE_INODE &&
+                            entry.val() instanceof Apfs.JInodeValT) {
 
                         Map<String, Object> item = new HashMap<>();
                         int index = 0;
-                        for (XFieldT xf_h : ((Apfs.JInodeValT) file_entry.val()).xfields().xfData()) {
+                        for (XFieldT xf_h : ((Apfs.JInodeValT) entry.val()).xfields().xfData()) {
                             if (xf_h.xType() == Apfs.InoExtType.INO_EXT_TYPE_NAME) {
-                                item.put("name", ((Apfs.XfName) ((Apfs.JInodeValT) file_entry.val()).xfields().xf().get(index)).name());
+                                item.put("name", ((Apfs.XfName) ((Apfs.JInodeValT) entry.val()).xfields().xf().get(index)).name());
                             } else if (xf_h.xType() == Apfs.InoExtType.INO_EXT_TYPE_DSTREAM) {
-                                item.put("file_size", ((Apfs.XfSize) ((Apfs.JInodeValT) file_entry.val()).xfields().xf().get(index)).size());
+                                item.put("file_size", ((Apfs.XfSize) ((Apfs.JInodeValT) entry.val()).xfields().xf().get(index)).size());
                             }
                             index++;
                         }
                         if (item.get("name") == null) {
                             throw new Exception("name not found");
                         }
-                        item.put("node_id", file_entry.jKeyT().objId());
-                        item.put("parent", ((Apfs.JInodeValT) file_entry.val()).parentId());
-                        item.put("private_id", ((Apfs.JInodeValT) file_entry.val()).privateId());
-                        item.put("creationtime", ((Apfs.JInodeValT) file_entry.val()).changeTime());
-                        item.put("accesstime", ((Apfs.JInodeValT) file_entry.val()).accessTime());
-                        item.put("modificationtime", ((Apfs.JInodeValT) file_entry.val()).modTime());
-                        if (((Apfs.JInodeValT) file_entry.val()).xfields().xfNumExts() == 1) {
+                        item.put("node_id", entry.jKeyT().objId());
+                        item.put("parent", ((Apfs.JInodeValT) entry.val()).parentId());
+                        item.put("private_id", ((Apfs.JInodeValT) entry.val()).privateId());
+                        item.put("creationtime", ((Apfs.JInodeValT) entry.val()).changeTime());
+                        item.put("accesstime", ((Apfs.JInodeValT) entry.val()).accessTime());
+                        item.put("modificationtime", ((Apfs.JInodeValT) entry.val()).modTime());
+                        if (((Apfs.JInodeValT) entry.val()).xfields().xfNumExts() == 1) {
                             item.put("type", "folder");
                         } else {
                             item.put("type", "file");
                         }
 
-                        itemmap.get(xid).get(volume).put((long) file_entry.jKeyT().objId(), item);
+                        itemMap.get(xid).get(volume).put((long) entry.jKeyT().objId(), item);
 
-System.err.println("inode: " + item.get("name"));
+logger.fine("inode: " + item.get("name"));
                     }
 
-                    // } catch (Exception ex) {
-                    //     logger.error("File entry %s %s parsing failed %s",
-                    //         file_entry.j_key_t.obj_id, file_entry.j_key_t.obj_type, ex);
-                    // }
+//} catch (Exception ex) {
+// logger.severe(String.format("File entry %s, %s parsing failed %s",
+//  entry.jKeyT().objId(), entry.jKeyT().objType(), ex));
+// ex.printStackTrace();
+//}
                 }
             }
         }
 
         ItemStore store = new ItemStore();
-        for (long xid : file_entries.keySet()) {
+        for (long xid : entries.keySet()) {
 
-            for (String volume : file_entries.get(xid).keySet()) {
+            for (String volume : entries.get(xid).keySet()) {
 
-                List<Map<String, Object>> s = new ArrayList<>(itemmap.get(xid).get(volume).values());
-                Collections.sort(s, (o1, o2) -> (int)((long) o1.get("parent") - (long) o2.get("parent")));
-s.forEach(Debug::println);
+                List<Map<String, Object>> s = new ArrayList<>(itemMap.get(xid).get(volume).values());
+                s.sort((o1, o2) -> (int) ((long) o1.get("parent") - (long) o2.get("parent")));
+//s.forEach(Debug::println);
 
                 for (Map<String, Object> item : s) {
 
                     // path on image
-                    String path = get_path((Map) itemmap.get(xid).get(volume), (long) (int) item.get("node_id"));
+                    String path = getPath(itemMap.get(xid).get(volume), (int) item.get("node_id"));
 
                     List<Map<String, Object>> extents = new ArrayList<>();
 
@@ -150,18 +143,18 @@ s.forEach(Debug::println);
                     if (item.get("type").equals("file")) {
                         long remaining = (long) item.get("file_size");
 
-                        Collections.sort(
-                             extentmap.get(xid).get(volume).getOrDefault((long) item.get("private_id"), new ArrayList<>()), (o1, o2) -> (int) ((long) o1.get("offset") - (long) o1.get("offset")));
-                        extents = extentmap.get(xid).get(volume).getOrDefault((long) item.get("private_id"), new ArrayList<>());
+                        extentMap.get(xid).get(volume).getOrDefault((long) item.get("private_id"),
+                                new ArrayList<>()).sort((o1, o2) -> (int) ((long) o1.get("offset") - (long) o2.get("offset")));
+                        extents = extentMap.get(xid).get(volume).getOrDefault((long) item.get("private_id"), new ArrayList<>());
 
                         for (Map<String, Object> extent : extents) {
-                            Map<String, Object> intermediate = process_extent(extent, remaining, blocksize, file_io, md5);
+                            Map<String, Object> intermediate = processExtent(extent, remaining, blockSize, io, md5);
                             md5 = (MessageDigest) intermediate.get("md5");
                             remaining = (long) intermediate.get("remaining");
                         }
                     }
 
-                    store.add_item((String) item.get("type"), xid, (long) item.get("parent"), (long) (int) item.get("node_id"), "exists", volume, Paths.get(path).getParent().toString(),
+                    store.addItem((String) item.get("type"), xid, (long) item.get("parent"), (int) item.get("node_id"), "exists", volume, Paths.get(path).getParent().toString(),
                                    (String) item.get("name"), ((long) item.get("accesstime")) / 1000000000,
                                    ((long) item.get("modificationtime")) / 1000000000, ((long) item.get("creationtime")) / 1000000000,
                                    item.containsKey("file_size") ? (long) item.get("file_size") : 0,

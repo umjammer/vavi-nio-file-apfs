@@ -11,7 +11,7 @@ class Checksum {
         long sum1 = 0;
         long sum2 = 0;
 
-        final long mod_value = 0xffffffffl;  // 2<<31 - 1;
+        final long mod_value = 0xffff_ffffL;  // 2<<31 - 1;
 
 //Debug.printf("loop : %d\n", data.length / 4);
         for (int i = 0; i < data.length / 4; i++) {

@@ -8,16 +8,19 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 
+import org.junit.jupiter.api.Test;
 import vavi.nio.file.apfs.ByteBufferKaitaiStream2;
+import vavi.nio.file.apfs.Carve;
 import vavi.nio.file.apfs.ItemStore;
 import vavi.nio.file.apfs.Parse;
 import vavi.nio.file.apfs.Process;
-import vavi.nio.file.apfs.kaitai.Apfs;
-import vavi.nio.file.apfs.kaitai.Apfs.NodeEntry;
-import vavi.nio.file.apfs.kaitai.Apfs.NxSuperblockT;
-import vavi.nio.file.apfs.kaitai.Apfs.Obj;
+import vavi.nio.file.apfs.Apfs;
+import vavi.nio.file.apfs.Apfs.NodeEntry;
+import vavi.nio.file.apfs.Apfs.NxSuperblockT;
+import vavi.nio.file.apfs.Apfs.Obj;
 
 import io.kaitai.struct.KaitaiStream;
+import vavi.util.Debug;
 
 
 /**
@@ -28,32 +31,54 @@ import io.kaitai.struct.KaitaiStream;
  */
 public class Afro {
 
+    @Test
+    void test0() throws Exception {
+        main(new String[] {"/Users/nsano/src/python/afro/test/wsdf.dmg", "40", "parse"});
+    }
+
+    @Test
+    void test1() throws Exception {
+        main(new String[] {"/Users/nsano/work/fusion/img/nsanomac4_ssd.img", "409640", "carve-nodes"});
+    }
+
     /**
-     * @param args
+     * @param args 0: filename, 1: offset
      */
     public static void main(String[] args) throws Exception {
-        String fileName = "/Users/nsano/work/fusion/img/nsanomac4_ssd.img";
-        long offset = 409640 * 512;
-//        String fileName = "/Users/nsano/src/python/afro/test/wsdf.dmg";
-//        long offset = 40 * 512;
+        String fileName = args[0];
+        long offset = Long.parseLong(args[1]) * 512;
+        String command = args[2];
 
         KaitaiStream io = new ByteBufferKaitaiStream2(fileName, offset);
         Apfs apfs = new Apfs(io);
 
         Obj nxsb = apfs.block0();
-        long block_size = ((NxSuperblockT) nxsb.body()).nxBlockSize();
-//System.err.printf("block_size: %d\n", block_size);
-        io.seek(0l);
+        int blockSize = (int) ((NxSuperblockT) nxsb.body()).nxBlockSize();
+//Debug.printf("blockSize: %d", blockSize);
+        io.seek(0L);
 
-        Map<Long, Map<String, List<NodeEntry>>> es = Parse.parse(io);
-        ItemStore store = new Process().process_file_entries(es, apfs, (int) block_size, io);
+        Map<Long, Map<String, List<NodeEntry>>> es;
+Debug.printf("command: %s", command);
+        switch (command) {
+        case "parse":
+        default:
+            es = Parse.parse(io, apfs, blockSize);
+            break;
+        case "carve-nxsb":
+            es = new Carve().nxsb(io, apfs, blockSize);
+            break;
+        case "carve-apsb":
+            es = new Carve().apsb(io, apfs, blockSize);
+            break;
+        case "carve-nodes":
+            es = new Carve().nodes(io, apfs, blockSize);
+            break;
+        }
+        ItemStore store = new Process().processEntries(es, blockSize, io);
         String basename = Paths.get(fileName).getFileName().toString();
-        store.save_files("tmp/" + basename + ".extracted", (int) block_size, io);
-        store.save_bodyfile("tmp/" + basename + ".bodyfile");
+        store.saveFiles("tmp/" + basename + ".extracted", blockSize, io);
+        store.saveBodyFile("tmp/" + basename + ".bodyfile");
         store.save_gtf("tmp/" + basename + ".gtf");
-
-//        Carve carve = new Carve();
-//        carve.nodes(io, (int) block_size);
     }
 }
 

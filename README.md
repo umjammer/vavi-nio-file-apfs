@@ -1,8 +1,19 @@
+[![Release](https://jitpack.io/v/umjammer/vavi-nio-file-apfs.svg)](https://jitpack.io/#umjammer/vavi-nio-file-apfs)
+[![Actions Status](https://github.com/umjammer/vavi-nio-file-apfs/workflows/Java%20CI/badge.svg)](https://github.com/umjammer/vavi-nio-file-apfs/actions)
+[![CodeQL](https://github.com/umjammer/vavi-nio-file-apfs/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/umjammer/vavi-nio-file-apfs/actions/workflows/codeql-analysis.yml)
+![Java](https://img.shields.io/badge/Java-8-b07219)
+[![Parent](https://img.shields.io/badge/Parent-vavi--apps--fuse-pink)](https://github.com/umjammer/vavi-apps-fuse)
+
 # vavi-nio-file-apfs
 
  Apple File System for Java
 
+## Status
 
+| fs     | list | upload | download | copy | move | rm | mkdir | cache | watch | library |
+|--------|------|--------|----------|------|------|----|-------|-------|-------|---------|
+| apfs   | ✅   |       | ✅       |    |   |  |    |    |       | kaitai struct |
+| fusion | 🚧   |     |        |    |   |  |    |    |       | kaitai struct |
 
 ## APFS
 
@@ -11,11 +22,4 @@
  * [apfs](https://github.com/tienex/apfs)
  * [afro](https://github.com/cugu/afro)
 
-
 ## TODO
-
-### rococoa
-
- * notification
- * keychain (cyberduck/core/dylib)
-   * https://github.com/conormcd/osx-keychain-java

@@ -8,15 +8,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
-import vavi.nio.file.apfs.kaitai.Apfs;
-import vavi.nio.file.apfs.kaitai.Apfs.ApfsSuperblockT;
-import vavi.nio.file.apfs.kaitai.Apfs.BtreeNodePhysT;
-import vavi.nio.file.apfs.kaitai.Apfs.NodeEntry;
-import vavi.nio.file.apfs.kaitai.Apfs.NxSuperblockT;
-import vavi.nio.file.apfs.kaitai.Apfs.Obj;
-import vavi.nio.file.apfs.kaitai.Apfs.OmapValT;
+import vavi.nio.file.apfs.Apfs.ApfsSuperblockT;
+import vavi.nio.file.apfs.Apfs.BtreeNodePhysT;
+import vavi.nio.file.apfs.Apfs.NodeEntry;
+import vavi.nio.file.apfs.Apfs.NxSuperblockT;
+import vavi.nio.file.apfs.Apfs.Obj;
+import vavi.nio.file.apfs.Apfs.OmapValT;
 
 import io.kaitai.struct.KaitaiStream;
+import vavi.util.Debug;
 
 
 /**
@@ -38,35 +38,31 @@ import io.kaitai.struct.KaitaiStream;
  */
 public class Parse {
 
-    Logger LOGGER = Logger.getLogger(Parse.class.getName());
+    static final Logger logger = Logger.getLogger(Parse.class.getName());
 
     /**
-     * @param volume_override nullable
+     * @param volumeOverride nullable
      */
-    static Map<Long, Map<String, List<NodeEntry>>> add_file_entries(Map<Long, Map<String, List<NodeEntry>>> file_entries,
-                                                                    Map<Long, Map<String, List<NodeEntry>>> new_file_entries,
-                                                                    long xid_override,
-                                                                    String volume_override) {
-        for (long xid : new_file_entries.keySet()) {
-            if (file_entries.get(xid_override) == null) {
-                file_entries.put(xid_override, new HashMap<>());
-            }
-            for (String volume : new_file_entries.get(xid).keySet()) {
-                volume_override = volume_override != null ? volume_override : volume;
-                if (file_entries.get(xid_override).get(volume_override) == null) {
-                    file_entries.get(xid_override).put(volume_override, new ArrayList<>());
-                }
-                file_entries.get(xid_override).get(volume_override).addAll(new_file_entries.get(xid).get(volume));
+    static Map<Long, Map<String, List<NodeEntry>>> addEntries(Map<Long, Map<String, List<NodeEntry>>> entries,
+                                                              Map<Long, Map<String, List<NodeEntry>>> newEntries,
+                                                              long xidOverride,
+                                                              String volumeOverride) {
+        for (long xid : newEntries.keySet()) {
+            entries.computeIfAbsent(xidOverride, k -> new HashMap<>());
+            for (String volume : newEntries.get(xid).keySet()) {
+                volumeOverride = volumeOverride != null ? volumeOverride : volume;
+                entries.get(xidOverride).computeIfAbsent(volumeOverride, k -> new ArrayList<>());
+                entries.get(xidOverride).get(volumeOverride).addAll(newEntries.get(xid).get(volume));
             }
         }
-        return file_entries;
+        return entries;
     }
 
     /**
      * 'unknown' is the default volume name node_type 1 contains only pointer
      * records
      */
-    static Map<Long, Map<String, List<NodeEntry>>> parse_node(Obj node, KaitaiStream image_io) {
+    static Map<Long, Map<String, List<NodeEntry>>> parseNode(Obj node, KaitaiStream io) {
         Map<Long, Map<String, List<NodeEntry>>> map1 = new HashMap<>();
         Map<String, List<NodeEntry>> map2 = new HashMap<>();
         if (((BtreeNodePhysT) node.body()).btnFlags() == 1) {
@@ -79,64 +75,64 @@ public class Parse {
         return map1;
     }
 
-    static Map<Long, Map<String, List<NodeEntry>>> parse_apsb(Obj apsb, KaitaiStream image_io) {
-        Map<Long, Map<String, List<NodeEntry>>> file_entries = new HashMap<>();
+    static Map<Long, Map<String, List<NodeEntry>>> parseSpsb(Obj apsb, KaitaiStream io) {
+        Map<Long, Map<String, List<NodeEntry>>> entries = new HashMap<>();
 
-        for (NodeEntry omap_entry : Low.get_apsb_objects(apsb)) {
+        for (NodeEntry oMapEntry : Low.get_apsb_objects(apsb)) {
             // get root directory
-            Obj root_node = ((OmapValT) omap_entry.val()).ovPaddr().target();
-            Map<Long, Map<String, List<NodeEntry>>> new_file_entries = parse_node(root_node, image_io);
-            file_entries = add_file_entries(file_entries,
-                                            new_file_entries,
-                                            apsb.hdr().oXid().val(),
-                                            ((ApfsSuperblockT) apsb.body()).apfsVolname());
+            Obj rootNode = ((OmapValT) oMapEntry.val()).ovPaddr().target();
+            Map<Long, Map<String, List<NodeEntry>>> newEntries = parseNode(rootNode, io);
+            entries = addEntries(entries,
+                    newEntries,
+                    apsb.hdr().oXid().val(),
+                    ((ApfsSuperblockT) apsb.body()).apfsVolname());
         }
-        return file_entries;
+        return entries;
     }
 
-    static Map<Long, Map<String, List<NodeEntry>>> parse_nxsb(Obj nxsb, KaitaiStream image_io) {
-        Map<Long, Map<String, List<NodeEntry>>> file_entries = new HashMap<>();
-//System.err.printf("parse_nxsb: %s\n", nxsb);
+    static Map<Long, Map<String, List<NodeEntry>>> parseNxsb(Obj nxsb, KaitaiStream io) {
+        Map<Long, Map<String, List<NodeEntry>>> entries = new HashMap<>();
+//Debug.printf("parse_nxsb: %s\n", nxsb);
 
-//System.err.printf("get_nxsb_objects: %s\n", Low.get_nxsb_objects(nxsb));
-        for (NodeEntry fs_entry : Low.get_nxsb_objects(nxsb)) {
+//Debug.printf("get_nxsb_objects: %s\n", Low.get_nxsb_objects(nxsb));
+        for (NodeEntry entry : Low.get_nxsb_objects(nxsb)) {
             // get volume superblock
-            Obj apsb = ((OmapValT) fs_entry.val()).ovPaddr().target();
-System.err.printf("apsb: %s\n", nxsb);
-            Map<Long, Map<String, List<NodeEntry>>> new_file_entries = parse_apsb(apsb, image_io);
-            file_entries = add_file_entries(file_entries, new_file_entries, nxsb.hdr().oXid().val(), null);
+Debug.printf("entry: %s", entry);
+try {
+            Obj apsb = ((OmapValT) entry.val()).ovPaddr().target();
+Debug.printf("apsb: %s\n", nxsb);
+            Map<Long, Map<String, List<NodeEntry>>> newEntries = parseSpsb(apsb, io);
+            entries = addEntries(entries, newEntries, nxsb.hdr().oXid().val(), null);
+} catch (Exception e) {
+ Debug.println(e);
+ e.printStackTrace();
+}
         }
 
-        return file_entries;
+        return entries;
     }
 
     /** parse image and print files */
-    public static Map<Long, Map<String, List<NodeEntry>>> parse(KaitaiStream image_io) throws IOException {
-
-        Apfs apfs = new Apfs(image_io);
+    public static Map<Long, Map<String, List<NodeEntry>>> parse(KaitaiStream io, Apfs apfs, int blockSize) throws IOException {
 
         // get from container superblock
         Obj nxsb = apfs.block0();
-//System.err.println("nxsb: " + nxsb);
-//System.err.println("nxsb.body(): " + nxsb.body());
-        long block_size = ((NxSuperblockT) nxsb.body()).nxBlockSize();
-System.err.printf("block_size: %d\n", block_size);
-        Map<Long, Map<String, List<NodeEntry>>> file_entries = parse_nxsb(nxsb, image_io);
-        long prev_nxsb = ((NxSuperblockT) nxsb.body()).nxXpDescBase() + ((NxSuperblockT) nxsb.body()).nxXpDescIndex() + 1;
+        Map<Long, Map<String, List<NodeEntry>>> entries = parseNxsb(nxsb, io);
+        long prevNxsb = ((NxSuperblockT) nxsb.body()).nxXpDescBase() + ((NxSuperblockT) nxsb.body()).nxXpDescIndex() + 1;
         long count = ((NxSuperblockT) nxsb.body()).nxXpDescLen();
 
         // get from older container superblocks
         for (int i = 0; i < count; i++) {
-            byte[] data = Block.get_block((int) prev_nxsb, (int) block_size, image_io);
+            byte[] data = Block.get_block((int) prevNxsb, blockSize, io);
             nxsb = new Obj(new ByteBufferKaitaiStream2(data), apfs, apfs);
             try {
-                file_entries.putAll(parse_nxsb(nxsb, image_io));
-                prev_nxsb = ((NxSuperblockT) nxsb.body()).nxXpDescBase() + ((NxSuperblockT) nxsb.body()).nxXpDescIndex() + 1;
+                entries.putAll(parseNxsb(nxsb, io));
+                prevNxsb = ((NxSuperblockT) nxsb.body()).nxXpDescBase() + ((NxSuperblockT) nxsb.body()).nxXpDescIndex() + 1;
             } catch (Exception e) {
                 break;
             }
         }
 
-        return file_entries;
+        return entries;
     }
 }

@@ -8,8 +8,9 @@ import io.kaitai.struct.KaitaiStream;
 
 
 class Block {
+
     /** Get data of a single block */
-    static byte[] get_block(int idx, int block_size, KaitaiStream file_io) throws IOException {
+    static byte[] get_block(int idx, int block_size, KaitaiStream file_io) {
         file_io.seek((long) idx * block_size);
         return file_io.readBytes(block_size);
     }

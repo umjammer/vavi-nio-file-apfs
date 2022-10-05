@@ -21,7 +21,8 @@ import io.kaitai.struct.KaitaiStream;
 
 
 public class ItemStore {
-    private static Logger logger = Logger.getLogger(ItemStore.class.getName());
+
+    private static final Logger logger = Logger.getLogger(ItemStore.class.getName());
 
     List<Map<String, Object>> items;
     Set<Map<String, Object>> seen;
@@ -36,7 +37,7 @@ public class ItemStore {
         this.seen.clear();
     }
 
-    void add_item(String item_type,
+    void addItem(String item_type,
                  long xid,
                  long parent_id,
                  long item_id,
@@ -54,7 +55,7 @@ public class ItemStore {
             extents = new ArrayList<>();
         }
         if (status.equals("exists") && (name == null || name.isEmpty())) {
-            System.err.printf("name not found (%d, %d, %d)\n", xid, parent_id, item_id);
+Debug.printf("name not found (%d, %d, %d)\n", xid, parent_id, item_id);
         }
         List<Map<String, Object>> e = extents;
         Map<String, Object> new_item = new HashMap<String, Object>() {{
@@ -73,16 +74,18 @@ public class ItemStore {
             put("status", status);
             put("extents", e);
         }};
-Debug.println(new_item);
+//Debug.println(new_item);
         if (!this.seen.contains(new_item)) {
             this.items.add(new_item);
-            Map<String, Object> hitem = (Map) ((HashMap) new_item).clone();
-            hitem.remove("extents");  // TODO list is not hashable
-            this.seen.add(hitem);
+            @SuppressWarnings({"unchecked", "rawtypes"})
+            Map<String, Object> hItem = (Map) ((HashMap<?, ?>) new_item).clone();
+            hItem.remove("extents");  // TODO list is not hashable
+            this.seen.add(hItem);
         }
     }
 
-    public void save_files(String name, int blocksize, KaitaiStream image_file_io) throws IOException {
+    @SuppressWarnings("unchecked")
+    public void saveFiles(String name, int blockSize, KaitaiStream io) throws IOException {
         // add suffix if file exists
         String basename = name;
         int i = 0;
@@ -95,28 +98,27 @@ Debug.println(new_item);
 
         for (Map<String, Object> item : this.items) {
             try {
-                Path full_path = Paths.get(name, String.valueOf(item.get("volume")), String.valueOf(item.get("xid")), String.valueOf(item.get("path")).substring(1));
-                if (full_path != null) {
-                    Files.createDirectories(full_path);
-                }
-                Path file_path = full_path.resolve(String.valueOf(item.get("name")));
-Debug.println(file_path);
+                Path fullPath = Paths.get(name, String.valueOf(item.get("volume")), String.valueOf(item.get("xid")), String.valueOf(item.get("path")).substring(1));
+                Files.createDirectories(fullPath);
+                Path filePath = fullPath.resolve(String.valueOf(item.get("name")));
+Debug.println(filePath);
                 if (item.get("type").equals("folder")) {
-                    Files.createDirectories(file_path);
+                    Files.createDirectories(filePath);
                 } else {
-                    try (OutputStream file_io = Files.newOutputStream(file_path)) {
+                    try (OutputStream os = Files.newOutputStream(filePath)) {
                         long remaining = (long) item.get("size");
-                        for (Map<String, Object> extent : (List<Map>) item.get("extents")) {
-                            for (long block_part = 0; block_part < (long) extent.get("length") / blocksize; block_part++) {
-                                byte[] data = Block.get_block((int) ((long) extent.get("start") + block_part), blocksize, image_file_io);
-                                long chunk_size;
-                                if (remaining < blocksize) {
-                                    chunk_size = remaining;
+Debug.println(((List<Map<String, Object>>) item.get("extents")).size());
+                        for (Map<String, Object> extent : (List<Map<String, Object>>) item.get("extents")) {
+                            for (long blockPart = 0; blockPart < (long) extent.get("length") / blockSize; blockPart++) {
+                                byte[] data = Block.get_block((int) ((long) extent.get("start") + blockPart), blockSize, io);
+                                long chunkSize;
+                                if (remaining < blockSize) {
+                                    chunkSize = remaining;
                                 } else {
-                                    chunk_size = blocksize;
+                                    chunkSize = blockSize;
                                 }
-                                remaining -= chunk_size;
-                                file_io.write(data, 0, (int) chunk_size);
+                                remaining -= chunkSize;
+                                os.write(data, 0, (int) chunkSize);
                             }
                         }
                     }
@@ -127,7 +129,7 @@ Debug.println(file_path);
         }
     }
 
-    public void save_bodyfile(String name) throws IOException {
+    public void saveBodyFile(String name) throws IOException {
         // add suffix if file exists
         String basename = name;
         int i = 0;
@@ -136,8 +138,8 @@ Debug.println(file_path);
             i += 1;
         }
 
-        try (BufferedWriter csvfile = Files.newBufferedWriter(Paths.get(name))) {
-            String[] fieldnames = {
+        try (BufferedWriter csvFile = Files.newBufferedWriter(Paths.get(name))) {
+            String[] fieldNames = {
                 "md5",
                 "name",
                 "id",
@@ -150,9 +152,10 @@ Debug.println(file_path);
                 "ctime",
                 "crtime",
             };
-            csvfile.write(String.join("|", fieldnames) + "\n");
+            csvFile.write(String.join("|", fieldNames) + "\n");
             for (Map<String, Object> item : this.items) {
-                final Map<String, Object> i2 = (Map) ((HashMap) item).clone();
+                @SuppressWarnings("unchecked")
+                final Map<String, Object> i2 = (Map<String, Object>) ((HashMap<String, Object>) item).clone();
                 long xid = i2.get("xid") != null ? (long) i2.get("xid") : 0;
                 i2.put("id", String.format("%s-%s-%s", 0, xid, i2.get("id")));  // TODO : add volume number
                 i2.put("name", Paths.get((String) i2.get("path"), (String) i2.get("name")));
@@ -160,8 +163,8 @@ Debug.println(file_path);
                 i2.put("uid", 0);
                 i2.put("gid", 0);
                 i2.put("ctime", 0);
-                String[] row = Arrays.stream(fieldnames).map(k -> String.valueOf(i2.get(k))).toArray(String[]::new);
-                csvfile.write(String.join("|", row) + "\n");
+                String[] row = Arrays.stream(fieldNames).map(k -> String.valueOf(i2.get(k))).toArray(String[]::new);
+                csvFile.write(String.join("|", row) + "\n");
             }
         }
     }
@@ -174,15 +177,15 @@ Debug.println(file_path);
             i += 1;
         }
 
-        try (BufferedWriter csvfile = Files.newBufferedWriter(Paths.get(name))) {
-            String[] fieldnames = {
+        try (BufferedWriter csvFile = Files.newBufferedWriter(Paths.get(name))) {
+            String[] fieldNames = {
                 "type", "xid", "parent_id", "id", "status", "volume", "path", "name", "atime", "mtime", "crtime",
                 "size", "md5"
             };
-            csvfile.write(String.join(",", fieldnames));
+            csvFile.write(String.join(",", fieldNames));
             for (Map<String, Object> item : this.items) {
-                String[] row = Arrays.stream(fieldnames).map(k -> String.valueOf(item.get(k))).toArray(String[]::new);
-                csvfile.write(String.join(",", row) + "\n");
+                String[] row = Arrays.stream(fieldNames).map(k -> String.valueOf(item.get(k))).toArray(String[]::new);
+                csvFile.write(String.join(",", row) + "\n");
             }
         }
     }

@@ -117,7 +117,7 @@ Debug.printf("offset: 0x%016x, 0x%016x, 0x%016x\n", offset, fc.size(), Math.min(
         bb = null;
     }
 
-    //region Stream positioning
+//#region Stream positioning
 
     @Override
     public boolean isEof() {
@@ -155,11 +155,11 @@ Debug.printf("offset: 0x%016x, 0x%016x, 0x%016x\n", offset, fc.size(), Math.min(
         return offset + bb.limit();
     }
 
-    //endregion
+//#endregion
 
-    //region Integer numbers
+//#region Integer numbers
 
-    //region Signed
+//#region Signed
 
     /**
      * Reads one signed 1-byte integer, returning it properly as Java's "byte" type.
@@ -170,7 +170,7 @@ Debug.printf("offset: 0x%016x, 0x%016x, 0x%016x\n", offset, fc.size(), Math.min(
         return bb.get();
     }
 
-    //region Big-endian
+//#region Big-endian
 
     @Override
     public short readS2be() {
@@ -190,9 +190,9 @@ Debug.printf("offset: 0x%016x, 0x%016x, 0x%016x\n", offset, fc.size(), Math.min(
         return bb.getLong();
     }
 
-    //endregion
+    //#endregion
 
-    //region Little-endian
+    //#region Little-endian
 
     @Override
     public short readS2le() {
@@ -212,18 +212,18 @@ Debug.printf("offset: 0x%016x, 0x%016x, 0x%016x\n", offset, fc.size(), Math.min(
         return bb.getLong();
     }
 
-    //endregion
+//#endregion
 
-    //endregion
+//#endregion
 
-    //region Unsigned
+//#region Unsigned
 
     @Override
     public int readU1() {
         return bb.get() & 0xff;
     }
 
-    //region Big-endian
+//#region Big-endian
 
     @Override
     public int readU2be() {
@@ -237,9 +237,9 @@ Debug.printf("offset: 0x%016x, 0x%016x, 0x%016x\n", offset, fc.size(), Math.min(
         return bb.getInt() & 0xffffffffL;
     }
 
-    //endregion
+//#endregion
 
-    //region Little-endian
+//#region Little-endian
 
     @Override
     public int readU2le() {
@@ -253,15 +253,15 @@ Debug.printf("offset: 0x%016x, 0x%016x, 0x%016x\n", offset, fc.size(), Math.min(
         return bb.getInt() & 0xffffffffL;
     }
 
-    //endregion
+//#endregion
 
-    //endregion
+//#endregion
 
-    //endregion
+//#endregion
 
-    //region Floating point numbers
+//#region Floating point numbers
 
-    //region Big-endian
+//#region Big-endian
 
     @Override
     public float readF4be() {
@@ -275,9 +275,9 @@ Debug.printf("offset: 0x%016x, 0x%016x, 0x%016x\n", offset, fc.size(), Math.min(
         return bb.getDouble();
     }
 
-    //endregion
+//#endregion
 
-    //region Little-endian
+//#region Little-endian
 
     @Override
     public float readF4le() {
@@ -291,11 +291,11 @@ Debug.printf("offset: 0x%016x, 0x%016x, 0x%016x\n", offset, fc.size(), Math.min(
         return bb.getDouble();
     }
 
-    //endregion
+//#endregion
 
-    //endregion
+//#endregion
 
-    //region Byte arrays
+//#region Byte arrays
 
     /**
      * Reads designated number of bytes from the stream.
@@ -321,7 +321,7 @@ Debug.printf("offset: 0x%016x, 0x%016x, 0x%016x\n", offset, fc.size(), Math.min(
     }
 
     @Override
-    public byte[] readBytesTerm(int term, boolean includeTerm, boolean consumeTerm, boolean eosError) {
+    public byte[] readBytesTerm(byte term, boolean includeTerm, boolean consumeTerm, boolean eosError) {
         ByteArrayOutputStream buf = new ByteArrayOutputStream();
         while (true) {
             if (!bb.hasRemaining()) {
@@ -343,5 +343,5 @@ Debug.printf("offset: 0x%016x, 0x%016x, 0x%016x\n", offset, fc.size(), Math.min(
         }
     }
 
-    //endregion
+//#endregion
 }
