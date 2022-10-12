@@ -29,8 +29,9 @@
           <sourceDirectory>src/main/kaitai</sourceDirectory>
           <version>0.10</version>
           <packageName>vavi.nio.file.apfs.kaitai</packageName>
-
           <output>src/main/java</output>
+
+          <skip>true</skip>
 
         </configuration>
         <executions>
