@@ -23,3 +23,4 @@
  * [afro](https://github.com/cugu/afro)
 
 ## TODO
+ * https://github.com/DOORM4T/partition-inspector
