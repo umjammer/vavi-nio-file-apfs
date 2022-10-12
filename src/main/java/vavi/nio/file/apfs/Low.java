@@ -25,11 +25,14 @@ Debug.println("object type: " + object_map.hdr().oType());
         Obj object_map_root;
         if (object_map.hdr().oType() == Apfs.ObjectType.OBJECT_TYPE_BTREE || object_map.hdr().oType() == Apfs.ObjectType.OBJECT_TYPE_BTREE_NODE) {
             object_map_root = object_map;
+Debug.println("1: object_map_root: " + object_map_root);
         } else {
             object_map_root = ((OmapPhysT) object_map.body()).omTreeOid().target();
+Debug.println("2: object_map_root: " + object_map_root);
         }
 
         // iterate omap
+Debug.println("RET: " + ((BtreeNodePhysT) object_map_root.body()).btnData().size());
         return ((BtreeNodePhysT) object_map_root.body()).btnData();
      }
 

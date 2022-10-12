@@ -653,7 +653,7 @@ Debug.println(Level.FINE, "unhandled jKeyT().objType(): " + on);
             if (this.val != null)
                 return this.val;
             long _pos = this._io.pos();
-Debug.printf(Level.FINE, "seek: %08x, %08x, %08x\n",_root.blockSize(), dataOffset(), 40 * (_parent().btnFlags() & 1));
+Debug.printf(Level.FINE, "seek: %08x, %08x, %08x\n",_root.blockSize(), dataOffset(), 40 * (_parent().btnFlags() & 1), _pos);
             JObjTypes objType = jKeyT().objType();
 Debug.println(Level.FINE, "jKeyT().objType(): " + objType);
             this._io.seek(((_root.blockSize() - dataOffset()) - (40 * (_parent().btnFlags() & 1))));
@@ -2192,6 +2192,7 @@ Debug.println("default: " + objType);
             _read();
         }
         private void _read() {
+Debug.println(this._io.pos() + " / " + this._io.size());
             this.xfNumExts = this._io.readU2le();
             this.xfUsedData = this._io.readU2le();
             xfData = new ArrayList<XFieldT>(((Number) (xfNumExts())).intValue());
