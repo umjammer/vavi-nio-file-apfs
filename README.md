@@ -1,5 +1,5 @@
 [![Release](https://jitpack.io/v/umjammer/vavi-nio-file-apfs.svg)](https://jitpack.io/#umjammer/vavi-nio-file-apfs)
-[![Java CI](https://github.com/umjammer/vavi-nio-file-apfs/workflows/maven.yml/badge.svg)](https://github.com/umjammer/vavi-nio-file-apfs/actions)
+[![Java CI](https://github.com/umjammer/vavi-nio-file-apfs/actions/workflows/maven.yml/badge.svg)](https://github.com/umjammer/vavi-nio-file-apfs/actions)
 [![CodeQL](https://github.com/umjammer/vavi-nio-file-apfs/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/umjammer/vavi-nio-file-apfs/actions/workflows/codeql-analysis.yml)
 ![Java](https://img.shields.io/badge/Java-8-b07219)
 [![Parent](https://img.shields.io/badge/Parent-vavi--apps--fuse-pink)](https://github.com/umjammer/vavi-apps-fuse)
